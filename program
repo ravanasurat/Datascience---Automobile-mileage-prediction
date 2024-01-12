@@ -1,0 +1,101 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, Ridge, Lasso
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import make_pipeline
+
+# Load the dataset
+url = "https://raw.githubusercontent.com/ammishra08/MachineLearning/master/Datasets/auto-mpg.data"
+column_names_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.names"
+
+# Fetch column names from the .names file
+columns = [
+    "mpg", "cylinders", "displacement", "horsepower", "weight",
+    "acceleration", "model year", "origin", "car name"
+]
+
+# Load the data using the specified column names
+df = pd.read_csv(url, sep='\s+', names=columns, na_values='?')
+
+# Display the first few rows of the dataset
+print(df.head())
+
+# Exploratory Data Analysis (EDA)
+# Visualize relationships between variables using pair plots and correlation heatmap
+sns.pairplot(df, diag_kind='kde')
+plt.show()
+
+# Correlation heatmap
+correlation_matrix = df.corr()
+plt.figure(figsize=(10, 8))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+plt.title('Correlation Heatmap')
+plt.show()
+
+# Handle missing values
+df.dropna(inplace=True)
+
+# Prepare features (X) and target variable (y)
+X = df.drop(['mpg', 'car name'], axis=1)
+y = df['mpg']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Linear Regression
+linear_model = LinearRegression()
+linear_model.fit(X_train, y_train)
+linear_preds = linear_model.predict(X_test)
+
+# Ridge Regression
+ridge_model = make_pipeline(StandardScaler(), Ridge())
+ridge_model.fit(X_train, y_train)
+ridge_preds = ridge_model.predict(X_test)
+
+# Lasso Regression
+lasso_model = make_pipeline(StandardScaler(), Lasso())
+lasso_model.fit(X_train, y_train)
+lasso_preds = lasso_model.predict(X_test)
+
+# Evaluate models
+def evaluate_model(model_name, y_true, y_pred):
+    r2 = r2_score(y_true, y_pred)
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true, y_pred)
+
+    print(f"{model_name} Metrics:")
+    print(f"R2 Score: {r2:.4f}")
+    print(f"Mean Squared Error (MSE): {mse:.4f}")
+    print(f"Root Mean Squared Error (RMSE): {rmse:.4f}")
+    print(f"Mean Absolute Error (MAE): {mae:.4f}")
+    print("\n")
+
+evaluate_model("Linear Regression", y_test, linear_preds)
+evaluate_model("Ridge Regression", y_test, ridge_preds)
+evaluate_model("Lasso Regression", y_test, lasso_preds)
+
+# Identify the best model based on R2 Score
+models = ["Linear Regression", "Ridge Regression", "Lasso Regression"]
+r2_scores = [r2_score(y_test, linear_preds), r2_score(y_test, ridge_preds), r2_score(y_test, lasso_preds)]
+
+best_model_index = np.argmax(r2_scores)
+best_model = models[best_model_index]
+
+# Make new predictions using the best model
+if best_model == "Linear Regression":
+    best_model_preds = linear_model.predict(X_test)
+elif best_model == "Ridge Regression":
+    best_model_preds = ridge_model.predict(X_test)
+else:
+    best_model_preds = lasso_model.predict(X_test)
+
+# Display predictions and evaluate the best model
+print(f"Predictions using the Best Model ({best_model}):")
+print(best_model_preds)
+
+evaluate_model(f"Best Model ({best_model})", y_test, best_model_preds)
